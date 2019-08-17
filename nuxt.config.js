@@ -1,3 +1,6 @@
+require ('dotenv').config();
+const { BASE_URL } = process.env;
+
 export default {
   mode: 'spa',
   /*
@@ -49,5 +52,8 @@ export default {
      ** You can extend webpack config here
      */
     extend(config, ctx) {}
+  },
+  env: {
+    BASE_URL
   }
 }

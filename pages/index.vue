@@ -51,6 +51,7 @@ export default {
       const file = files[0]
       const reader = new FileReader()
       this.rawImageSize = this.getAppropriateSize(file.size)
+      this.fileName = file.name.split('.')[0]
       reader.readAsDataURL(file)
       reader.onload = (evt) => {
         const size = evt.target.result.length
@@ -66,7 +67,12 @@ export default {
         : 0
     },
     postImage() {
-      this.$axios.$post(`${process.env.BASE_URL}/image`)
+      // あえてのXMLHttpRequest
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', `${process.env.BASE_URL}/images`, false)
+      xhr.setRequestHeader('Content-Type', 'application/json')
+      xhr.send(`name=${this.fileName}&uploadImage=${this.uploadTarget}`)
+      xhr.abort()
     }
   }
 }
