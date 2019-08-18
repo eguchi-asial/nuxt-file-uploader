@@ -24,6 +24,14 @@
         </div>
         <textarea v-model="uploadTarget" class="result-base64" />
       </section>
+      <section class="s3-images">
+        <p class="title">S3イメージ</p>
+        <ul>
+          <li v-for="(image, index) in s3Images" :key="index">
+            {{ image.Key }}
+          </li>
+        </ul>
+      </section>
     </div>
   </div>
 </template>
@@ -34,13 +42,17 @@ export default {
     return {
       uploadTarget: '',
       rawImageSize: '0 KB',
-      base64Size: '0 KB'
+      base64Size: '0 KB',
+      s3Images: []
     }
   },
   computed: {
     imageSrc() {
       return this.uploadTarget || '/images/NoImage.png'
     }
+  },
+  mounted() {
+    this.getImages()
   },
   methods: {
     changeFile(data) {
@@ -66,13 +78,56 @@ export default {
           : `${(size / 1024).toFixed(1)} KB`
         : 0
     },
-    postImage() {
-      // あえてのXMLHttpRequest
-      const xhr = new XMLHttpRequest()
-      xhr.open('POST', `${process.env.BASE_URL}/images`, false)
-      xhr.setRequestHeader('Content-Type', 'application/json')
-      xhr.send(`name=${this.fileName}&uploadImage=${this.uploadTarget}`)
-      xhr.abort()
+    /** S3にPOST後にGETで最新化する */
+    async postImage() {
+      await this.postS3Image()
+      await this.getImages()
+    },
+    async getImages() {
+      const { message: { Contents = [] } = {} } = await this.getS3Images()
+      this.s3Images = Contents.filter((data) => data.Size > 0)
+    },
+    postS3Image() {
+      return new Promise((resolve, reject) => {
+        // あえてのXMLHttpRequest
+        const xhr = new XMLHttpRequest()
+        xhr.open('POST', `${process.env.BASE_URL}/images`, false)
+        xhr.setRequestHeader('Content-Type', 'application/json')
+        xhr.onload = (e) => {
+          if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+              resolve(xhr.statusText)
+            } else {
+              reject(new Error(xhr.statusText))
+            }
+          }
+        }
+        xhr.onerror = (e) => {
+          alert('500 Internal ServerError')
+          reject(new Error(xhr.statusText))
+        }
+        xhr.send(`name=${this.fileName}&uploadImage=${this.uploadTarget}`)
+        xhr.abort()
+      })
+    },
+    getS3Images() {
+      return new Promise((resolve, reject) => {
+        // あえてのXMLHttpRequest
+        const xhr = new XMLHttpRequest()
+        xhr.open('GET', `${process.env.BASE_URL}/images`, false)
+        xhr.setRequestHeader('Content-Type', 'application/json')
+        xhr.onload = (e) => {
+          if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+              resolve(JSON.parse(xhr.response))
+            } else {
+              reject(new Error(xhr.statusText))
+            }
+          }
+        }
+        xhr.onerror = (e) => reject(new Error(xhr.statusText))
+        xhr.send(null)
+      })
     }
   }
 }
@@ -123,6 +178,17 @@ html {
         text-align: left;
         strong {
           color: red;
+        }
+      }
+    }
+    &.s3-images {
+      .title {
+        text-align: left;
+      }
+      ul {
+        li {
+          text-align: left;
+          font-size: 1.8rem;
         }
       }
     }
