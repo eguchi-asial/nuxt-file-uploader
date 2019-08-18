@@ -28,7 +28,10 @@
         <p class="title">S3イメージ</p>
         <ul>
           <li v-for="(image, index) in s3Images" :key="index">
-            {{ image.Key }}
+            <div>
+              <span>{{ image.Key }}</span>
+              <button @click="deleteImage(image.Key)">削除</button>
+            </div>
           </li>
         </ul>
       </section>
@@ -83,6 +86,11 @@ export default {
       await this.postS3Image()
       await this.getImages()
     },
+    /** S3にDELETE後にGETで最新化する */
+    async deleteImage(key) {
+      await this.deleteS3Image(key)
+      await this.getImages()
+    },
     async getImages() {
       const { message: { Contents = [] } = {} } = await this.getS3Images()
       this.s3Images = Contents.filter((data) => data.Size > 0)
@@ -127,6 +135,25 @@ export default {
         }
         xhr.onerror = (e) => reject(new Error(xhr.statusText))
         xhr.send(null)
+      })
+    },
+    deleteS3Image(key) {
+      console.log(key)
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('DELETE', `${process.env.BASE_URL}/images`, false)
+        xhr.setRequestHeader('Content-Type', 'application/json')
+        xhr.onload = (e) => {
+          if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+              resolve(xhr.statusText)
+            } else {
+              reject(new Error(xhr.statusText))
+            }
+          }
+        }
+        xhr.onerror = (e) => reject(new Error(xhr.statusText))
+        xhr.send(`key=${key}`)
       })
     }
   }
