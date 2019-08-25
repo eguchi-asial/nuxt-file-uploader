@@ -114,7 +114,12 @@ export default {
           alert('500 Internal ServerError')
           reject(new Error(xhr.statusText))
         }
-        xhr.send(`name=${this.fileName}&uploadImage=${this.uploadTarget}`)
+        xhr.send(
+          JSON.stringify({
+            name: this.fileName,
+            uploadImage: this.uploadTarget
+          })
+        )
         xhr.abort()
       })
     },
@@ -123,7 +128,6 @@ export default {
         // あえてのXMLHttpRequest
         const xhr = new XMLHttpRequest()
         xhr.open('GET', `${process.env.BASE_URL}/images`, false)
-        xhr.setRequestHeader('Content-Type', 'application/json')
         xhr.onload = (e) => {
           if (xhr.readyState === 4) {
             if (xhr.status === 200) {
@@ -153,7 +157,7 @@ export default {
           }
         }
         xhr.onerror = (e) => reject(new Error(xhr.statusText))
-        xhr.send(`key=${key}`)
+        xhr.send(JSON.stringify({ key }))
       })
     }
   }
